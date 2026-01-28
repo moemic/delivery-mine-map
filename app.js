@@ -292,18 +292,18 @@ document.getElementById('map-url').addEventListener('change', async (e) => {
         if (result.status === "success" && result.data) {
             const data = result.data;
             if (data.name) document.getElementById('store-name').value = data.name;
-            if (data.lat \u0026\u0026 data.lng) {
-    document.getElementById('lat').value = data.lat;
-    document.getElementById('lng').value = data.lng;
-    const loc = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
-    map.setCenter(loc);
-    map.setZoom(17);
-    showToast("店舗を特定しました！");
-}
+            if (data.lat && data.lng) {
+                document.getElementById('lat').value = data.lat;
+                document.getElementById('lng').value = data.lng;
+                const loc = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
+                map.setCenter(loc);
+                map.setZoom(17);
+                showToast("店舗を特定しました！");
+            }
         }
     } catch (err) {
-    console.error(err);
-}
+        console.error(err);
+    }
 });
 
 // 確実に初期化を実行
