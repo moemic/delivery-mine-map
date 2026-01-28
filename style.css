@@ -1,0 +1,436 @@
+:root {
+    --bg-color: #0f0f13;
+    --text-color: #e0e0e0;
+    --accent-color: #ff3b30;
+    /* 赤系統の不気味なアクセント */
+    --accent-hover: #ff6b63;
+    --glass-bg: rgba(25, 25, 30, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --font-main: 'Zen Kaku Gothic New', sans-serif;
+    --font-heading: 'Noto Sans JP', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow: hidden;
+    /* 地図を全画面表示するため */
+    height: 100vh;
+    width: 100vw;
+}
+
+#app {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}
+
+/* 地図 */
+#map {
+    height: 100%;
+    width: 100%;
+    filter: invert(1) hue-rotate(180deg) brightness(0.8);
+    /* 地図をダークモード風に */
+}
+
+/* ヘッダー */
+.glass-header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    padding: 15px 25px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    pointer-events: auto;
+    /* 検索バーのためにautoに変更 */
+    width: 320px;
+}
+
+.glass-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    text-shadow: 0 0 10px rgba(255, 59, 48, 0.5);
+    letter-spacing: 0.1em;
+}
+
+.glass-header p {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+
+/* 検索バー */
+.search-container {
+    pointer-events: auto;
+}
+
+.glass-input {
+    width: 100%;
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: #fff;
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.2);
+}
+
+/* 共通ガラスパネル設定 */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow);
+    border-radius: 16px;
+    color: var(--text-color);
+}
+
+/* 情報パネル（サイドバー） */
+#info-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 320px;
+    max-height: calc(100vh - 40px);
+    z-index: 20;
+    padding: 20px;
+    overflow-y: auto;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+#info-panel.hidden {
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #fff;
+}
+
+#panel-title {
+    font-family: var(--font-heading);
+    color: var(--accent-color);
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+
+.incident-detail h3 {
+    margin-top: 10px;
+    font-size: 1.1rem;
+}
+
+.incident-detail .date {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.incident-detail .desc {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.external-link {
+    display: inline-block;
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--accent-color);
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: bold;
+    border: 1px solid rgba(255, 59, 48, 0.2);
+    transition: all 0.2s;
+    margin-top: 10px;
+}
+
+.external-link:hover {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+/* FAB (Floating Action Button) */
+.fab {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--accent-color);
+    border: none;
+    color: white;
+    font-size: 2rem;
+    box-shadow: 0 4px 15px rgba(255, 59, 48, 0.6);
+    cursor: pointer;
+    z-index: 100;
+    transition: transform 0.2s, background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    background-color: var(--accent-hover);
+}
+
+.fab.active {
+    background-color: #fff;
+    color: var(--accent-color);
+    transform: rotate(45deg);
+}
+
+/* モーダル */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 500px;
+    padding: 30px;
+    position: relative;
+    transform: scale(1);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal.hidden .modal-content {
+    transform: scale(0.9);
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 1.8rem;
+    color: #aaa;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: #fff;
+}
+
+/* フォーム */
+.form-group {
+    margin-bottom: 15px;
+}
+
+/* フォーム改善 */
+.hint {
+    display: block;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+}
+
+/* レンジスライダー */
+input[type=range] {
+    width: 100%;
+    margin: 10px 0;
+    accent-color: var(--accent-color);
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ファイルアップロード */
+.file-upload-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.file-name {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#preview-area {
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    padding: 5px;
+}
+
+#photo-preview {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    display: block;
+}
+
+.form-group-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-group-row .form-group {
+    flex: 1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: #fff;
+    font-family: var(--font-main);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-group input.loading {
+    border-color: var(--accent-color);
+    background: rgba(255, 59, 48, 0.05);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-color);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background-color: var(--accent-hover);
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 50px;
+    z-index: 300;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+    opacity: 1;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+    pointer-events: none;
+}
