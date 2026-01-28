@@ -5,7 +5,7 @@ let isAddMode = false;
 let autocomplete;
 
 // デプロイ済みGAS URL
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyvYRzHMwNLWdoszGPrH-vplaRcbRHUBB-iKTgiyyqaRBN7syjb3zlll4K3UHiEC3_J/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyjgYtIOMl3mmAU2toAwD3_NxANm9SRnSli2XWZYqOpgCH3whqPNm1nbdidMJ5ql5rf/exec";
 
 // 地雷タイプ別の絵文字
 const icons = {
@@ -182,103 +182,6 @@ async function handleMapClick(latLng, Geocoder) {
 }
 
 // 投稿機能
-document.getElementById('incident-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const newIncident = {
-        lat: parseFloat(document.getElementById('lat').value),
-        lng: parseFloat(document.getElementById('lng').value),
-        type: document.getElementById('hazard-type').value,
-        storeName: document.getElementById('store-name').value,
-        waitTime: document.getElementById('wait-time').value,
-        comment: document.getElementById('comment').value,
-        url: document.getElementById('map-url').value,
-        photo: document.getElementById('photo-base64').value // base64
-    };
-
-    try {
-        showToast("保存中...");
-        const response = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify(newIncident)
-        });
-        const result = await response.json();
-
-        if (result.status === "success") {
-            showToast("報告が完了しました！💣");
-            fetchIncidents();
-            document.getElementById('add-modal').classList.add('hidden');
-            e.target.reset();
-            document.getElementById('photo-preview').src = "";
-            document.getElementById('preview-area').classList.add('hidden');
-            document.getElementById('file-name').textContent = "選択されていません";
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (err) {
-        console.error(err);
-        showToast("保存に失敗しました。再度お試しください。");
-    }
-});
-
-// 写真のBase64エンコード処理
-document.getElementById('photo-btn').addEventListener('click', () => {
-    document.getElementById('photo').click();
-});
-
-document.getElementById('photo').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    document.getElementById('file-name').textContent = file.name;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const base64 = event.target.result.split(',')[1];
-        document.getElementById('photo-base64').value = base64;
-
-        // プレビュー表示
-        const preview = document.getElementById('photo-preview');
-        preview.src = event.target.result;
-        document.getElementById('preview-area').classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-});
-
-// UI操作
-document.getElementById('close-panel').addEventListener('click', closeInfoPanel);
-document.querySelector('.close-modal').addEventListener('click', () => {
-    document.getElementById('add-modal').classList.add('hidden');
-});
-document.getElementById('add-mode-btn').addEventListener('click', () => {
-    toggleAddMode(!isAddMode);
-});
-
-// 待ち時間スライダー
-document.getElementById('wait-time').addEventListener('input', (e) => {
-    document.getElementById('wait-time-val').textContent = `${e.target.value}分`;
-});
-
-function toggleAddMode(active) {
-    isAddMode = active;
-    const btn = document.getElementById('add-mode-btn');
-    if (isAddMode) {
-        btn.classList.add('active');
-        showToast("場所を検索するか、地図をクリックしてください");
-        document.body.style.cursor = "crosshair";
-    } else {
-        btn.classList.remove('active');
-        document.body.style.cursor = "default";
-    }
-}
-
-function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3500);
-}
-
 // URL入力時の自動取得
 document.getElementById('map-url').addEventListener('change', async (e) => {
     const url = e.target.value.trim();
@@ -286,12 +189,12 @@ document.getElementById('map-url').addEventListener('change', async (e) => {
 
     try {
         showToast("店舗情報を取得中...");
-        const response = await fetch(`${GAS_URL}?action=scrape&url=${encodeURIComponent(url)}`);
+        const response = await fetch(`${GAS_URL}?action=analyze&url=${encodeURIComponent(url)}`);
         const result = await response.json();
 
         if (result.status === "success" && result.data) {
             const data = result.data;
-            if (data.name) document.getElementById('store-name').value = data.name;
+            if (data.storeName) document.getElementById('store-name').value = data.storeName;
             if (data.lat && data.lng) {
                 document.getElementById('lat').value = data.lat;
                 document.getElementById('lng').value = data.lng;
