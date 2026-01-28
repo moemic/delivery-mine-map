@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Map - 事故物件マップ</title>
+    <title>地雷店舗マップ | 配達員向け情報共有</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -24,8 +24,8 @@
 <body>
     <div id="app">
         <header class="glass-header">
-            <h1>Ghost Map</h1>
-            <p>見えないものが、ここにある。</p>
+            <h1>地雷店舗マップ</h1>
+            <p>地雷を避けて、効率的な配達を。</p>
             <div class="search-container">
                 <input id="pac-input" class="controls glass-input" type="text" placeholder="場所を検索...">
             </div>
@@ -35,7 +35,7 @@
 
         <div id="info-panel" class="glass-panel hidden">
             <button id="close-panel" class="close-btn">&times;</button>
-            <h2 id="panel-title">物件詳細</h2>
+            <h2 id="panel-title">店舗詳細</h2>
             <div id="panel-content">
                 <!-- 詳細情報がここに表示されます -->
             </div>
@@ -44,7 +44,7 @@
         <div id="add-modal" class="modal hidden">
             <div class="modal-content glass-panel">
                 <span class="close-modal">&times;</span>
-                <h2>事故物件情報を投稿</h2>
+                <h2>地雷店舗を報告 💣</h2>
                 <form id="incident-form">
                     <div class="form-group">
                         <label for="map-url">Googleマップ共有URL (必須)</label>
