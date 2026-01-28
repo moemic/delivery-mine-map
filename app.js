@@ -1,4 +1,4 @@
-// app.js - Mine Map Frontend
+// app.js - Mine Map Frontend (Stable Version)
 let map;
 let markers = [];
 let isAddMode = false;
@@ -7,42 +7,57 @@ let autocomplete;
 // デプロイ済みGAS URL
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyvYRzHMwNLWdoszGPrH-vplaRcbRHUBB-iKTgiyyqaRBN7syjb3zlll4K3UHiEC3_J/exec";
 
-// マーカーアイコン定義 (地雷タイプ別)
+// 地雷タイプ別の絵文字
 const icons = {
-    fire: '🔥',
-    suicide: '👻',
-    murder: '🔪',
-    solitary: '🍂',
-    other: '⚠️'
+    wait: '⏳',
+    location: '🗺️',
+    attitude: '😡',
+    parking: '🚲',
+    other: '💣'
+};
+
+const labels = {
+    wait: '調理待ちが長い',
+    location: '場所がわかりにくい',
+    attitude: '店員の態度が悪い',
+    parking: '駐輪スペースなし',
+    other: 'その他'
 };
 
 async function initMap() {
-    const { Map } = await google.maps.importLibrary("maps");
-    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-    const { Geocoder } = await google.maps.importLibrary("geocoding");
-    const { Autocomplete } = await google.maps.importLibrary("places");
+    console.log("Initializing Map...");
+    try {
+        const { Map } = await google.maps.importLibrary("maps");
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        const { Geocoder } = await google.maps.importLibrary("geocoding");
+        const { Autocomplete } = await google.maps.importLibrary("places");
 
-    map = new Map(document.getElementById("map"), {
-        center: { lat: 35.6895, lng: 139.6917 },
-        zoom: 13,
-        mapId: "DEMO_MAP_ID",
-        disableDefaultUI: true,
-    });
+        map = new Map(document.getElementById("map"), {
+            center: { lat: 35.6895, lng: 139.6917 },
+            zoom: 13,
+            mapId: "DEMO_MAP_ID",
+            disableDefaultUI: false,
+        });
 
-    // 検索機能のセットアップ
-    initAutocomplete(Autocomplete);
+        // 検索機能のセットアップ
+        initAutocomplete(Autocomplete);
 
-    // データのロード
-    fetchIncidents();
+        // データのロード
+        fetchIncidents();
 
-    // マップクリックイベント
-    map.addListener("click", (e) => {
-        if (!isAddMode) {
-            closeInfoPanel();
-            return;
-        }
-        handleMapClick(e.latLng, Geocoder);
-    });
+        // マッパー追加用クリックイベント
+        map.addListener("click", (e) => {
+            if (!isAddMode) {
+                closeInfoPanel();
+                return;
+            }
+            handleMapClick(e.latLng, Geocoder);
+        });
+
+        console.log("Map initialized successfully.");
+    } catch (error) {
+        console.error("Error during Map initialization:", error);
+    }
 }
 
 function initAutocomplete(Autocomplete) {
@@ -58,30 +73,24 @@ function initAutocomplete(Autocomplete) {
             return;
         }
 
-        // 地図を移動
         map.setCenter(place.geometry.location);
         map.setZoom(17);
 
-        // 投稿モードならフォームに住所をセット
         if (isAddMode) {
             document.getElementById('lat').value = place.geometry.location.lat();
             document.getElementById('lng').value = place.geometry.location.lng();
-            document.getElementById('address').value = place.formatted_address || place.name;
+            document.getElementById('store-name').value = place.name || "";
             document.getElementById('add-modal').classList.remove('hidden');
             toggleAddMode(false);
         } else {
-            showToast(`${place.name} に移動しました。投稿するには + ボタンを押してください。`);
+            showToast(`${place.name} に移動しました。`);
         }
     });
 }
 
 // データ取得
 async function fetchIncidents() {
-    if (!GAS_URL) {
-        console.warn("GAS_URLが未設定です。ローカルストレージを使用します。");
-        loadIncidentsFromLocal();
-        return;
-    }
+    if (!GAS_URL) return;
 
     try {
         const response = await fetch(GAS_URL);
@@ -92,28 +101,14 @@ async function fetchIncidents() {
         markers = [];
 
         data.forEach(incident => addMarkerToMap(incident));
-        showToast("最新データを読み込みました。");
     } catch (e) {
         console.error("Fetch failed", e);
-        showToast("データの読み込みに失敗しました。");
-        loadIncidentsFromLocal();
     }
-}
-
-// 予備: ローカルストレージからの読み込み
-function loadIncidentsFromLocal() {
-    const stored = localStorage.getItem('ghost_map_data');
-    if (!stored) return;
-    const incidents = JSON.parse(stored);
-    markers.forEach(m => m.setMap(null));
-    markers = [];
-    incidents.forEach(incident => addMarkerToMap(incident));
 }
 
 async function addMarkerToMap(incident) {
     const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
 
-    // lat/lngが文字列で来ることがあるため数値変換
     const position = {
         lat: parseFloat(incident.lat),
         lng: parseFloat(incident.lng)
@@ -126,13 +121,12 @@ async function addMarkerToMap(incident) {
     content.textContent = icons[incident.type] || icons.other;
     content.style.fontSize = '24px';
     content.style.cursor = 'pointer';
-    content.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))';
 
     const marker = new AdvancedMarkerElement({
         map: map,
         position: position,
         content: content,
-        title: incident.type
+        title: labels[incident.type] || incident.type
     });
 
     marker.element.addEventListener('click', () => {
@@ -146,21 +140,18 @@ function showInfoPanel(incident) {
     const panel = document.getElementById('info-panel');
     const content = document.getElementById('panel-content');
 
-    const typeLabel = {
-        fire: '火災', suicide: '自殺', murder: '殺人', solitary: '孤独死', other: 'その他'
-    }[incident.type];
-
     let extraHtml = "";
-    if (incident.price) extraHtml += `<p><strong>価格:</strong> <span style="color:var(--accent-color); font-weight:bold;">${incident.price}</span></p>`;
-    if (incident.area) extraHtml += `<p><strong>面積:</strong> ${incident.area}</p>`;
-    if (incident.url) extraHtml += `<p><a href="${incident.url}" target="_blank" class="external-link">🔗 物件情報を詳しく見る</a></p>`;
+    if (incident.waitTime) extraHtml += `<p><strong>目安待ち時間:</strong> ${incident.waitTime}分</p>`;
+    if (incident.url) extraHtml += `<p><a href="${incident.url}" target="_blank" class="external-link">🔗 Googleマップで見る</a></p>`;
+    if (incident.photoUrl) {
+        extraHtml += `<div class="info-photo"><img src="${incident.photoUrl}" alt="証拠写真" style="max-width:100%; border-radius:8px; margin-top:10px;"></div>`;
+    }
 
     content.innerHTML = `
         <div class="incident-detail">
-            <h3>${typeLabel} ${icons[incident.type]}</h3>
-            <span class="date">発生日: ${incident.date}</span>
-            <p><strong>場所:</strong> ${incident.address}</p>
-            <div class="desc">${incident.description}</div>
+            <h3>${labels[incident.type] || '地雷情報'} ${icons[incident.type] || ''}</h3>
+            <p><strong>店名:</strong> ${incident.storeName || '不明'}</p>
+            <div class="desc">${incident.comment || ''}</div>
             <div class="extra-info">
                 ${extraHtml}
             </div>
@@ -182,13 +173,9 @@ async function handleMapClick(latLng, Geocoder) {
     try {
         const response = await geocoder.geocode({ location: latLng });
         if (response.results[0]) {
-            document.getElementById('address').value = response.results[0].formatted_address;
-        } else {
-            document.getElementById('address').value = "住所不明";
+            document.getElementById('store-name').value = response.results[0].formatted_address;
         }
-    } catch (e) {
-        document.getElementById('address').value = "取得失敗";
-    }
+    } catch (e) { }
 
     toggleAddMode(false);
     document.getElementById('add-modal').classList.remove('hidden');
@@ -199,48 +186,64 @@ document.getElementById('incident-form').addEventListener('submit', async (e) =>
     e.preventDefault();
 
     const newIncident = {
-        id: Date.now(),
         lat: parseFloat(document.getElementById('lat').value),
         lng: parseFloat(document.getElementById('lng').value),
-        type: document.getElementById('type').value,
-        address: document.getElementById('address').value,
-        date: document.getElementById('date').value,
-        description: document.getElementById('description').value,
-        url: document.getElementById('url').value,
-        price: document.getElementById('price').value,
-        area: document.getElementById('area').value
+        type: document.getElementById('hazard-type').value,
+        storeName: document.getElementById('store-name').value,
+        waitTime: document.getElementById('wait-time').value,
+        comment: document.getElementById('comment').value,
+        url: document.getElementById('map-url').value,
+        photo: document.getElementById('photo-base64').value // base64
     };
 
-    if (GAS_URL) {
-        try {
-            showToast("保存中...");
-            await fetch(GAS_URL, {
-                method: "POST",
-                body: JSON.stringify(newIncident)
-            });
-            showToast("スプレッドシートに保存されました！");
-            fetchIncidents(); // 再取得してマーカー更新
-        } catch (err) {
-            console.error(err);
-            showToast("GASへの保存に失敗しました。ローカルに保存します。");
-            saveToLocal(newIncident);
-        }
-    } else {
-        saveToLocal(newIncident);
-    }
+    try {
+        showToast("保存中...");
+        const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(newIncident)
+        });
+        const result = await response.json();
 
-    document.getElementById('add-modal').classList.add('hidden');
-    e.target.reset();
+        if (result.status === "success") {
+            showToast("報告が完了しました！💣");
+            fetchIncidents();
+            document.getElementById('add-modal').classList.add('hidden');
+            e.target.reset();
+            document.getElementById('photo-preview').src = "";
+            document.getElementById('preview-area').classList.add('hidden');
+            document.getElementById('file-name').textContent = "選択されていません";
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (err) {
+        console.error(err);
+        showToast("保存に失敗しました。再度お試しください。");
+    }
 });
 
-function saveToLocal(item) {
-    const stored = localStorage.getItem('ghost_map_data');
-    let incidents = stored ? JSON.parse(stored) : [];
-    incidents.push(item);
-    localStorage.setItem('ghost_map_data', JSON.stringify(incidents));
-    addMarkerToMap(item);
-    showToast("ブラウザに保存されました。");
-}
+// 写真のBase64エンコード処理
+document.getElementById('photo-btn').addEventListener('click', () => {
+    document.getElementById('photo').click();
+});
+
+document.getElementById('photo').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    document.getElementById('file-name').textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const base64 = event.target.result.split(',')[1];
+        document.getElementById('photo-base64').value = base64;
+
+        // プレビュー表示
+        const preview = document.getElementById('photo-preview');
+        preview.src = event.target.result;
+        document.getElementById('preview-area').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+});
 
 // UI操作
 document.getElementById('close-panel').addEventListener('click', closeInfoPanel);
@@ -249,6 +252,11 @@ document.querySelector('.close-modal').addEventListener('click', () => {
 });
 document.getElementById('add-mode-btn').addEventListener('click', () => {
     toggleAddMode(!isAddMode);
+});
+
+// 待ち時間スライダー
+document.getElementById('wait-time').addEventListener('input', (e) => {
+    document.getElementById('wait-time-val').textContent = `${e.target.value}分`;
 });
 
 function toggleAddMode(active) {
@@ -271,50 +279,36 @@ function showToast(msg) {
     setTimeout(() => toast.classList.add('hidden'), 3500);
 }
 
-// URL入力時の自動スクレイピング
-document.getElementById('url').addEventListener('change', async (e) => {
+// URL入力時の自動取得
+document.getElementById('map-url').addEventListener('change', async (e) => {
     const url = e.target.value.trim();
-    if (!url || !url.startsWith('http') || !GAS_URL) return;
+    if (!url || !url.includes('maps')) return;
 
     try {
-        showToast("物件情報を自動取得中...");
-        document.getElementById('url').classList.add('loading');
-
+        showToast("店舗情報を取得中...");
         const response = await fetch(`${GAS_URL}?action=scrape&url=${encodeURIComponent(url)}`);
         const result = await response.json();
 
         if (result.status === "success" && result.data) {
             const data = result.data;
-            if (data.address) document.getElementById('address').value = data.address;
-            if (data.price) document.getElementById('price').value = data.price;
-            if (data.area) document.getElementById('area').value = data.area;
-            if (data.type) document.getElementById('type').value = data.type;
-
-            showToast("情報を抽出しました。場所を特定します...");
-
-            // 住所から緯度経度を自動取得
-            if (data.address) {
-                const geocoder = new google.maps.Geocoder();
-                geocoder.geocode({ address: data.address }, (results, status) => {
-                    if (status === "OK") {
-                        const loc = results[0].geometry.location;
-                        document.getElementById('lat').value = loc.lat();
-                        document.getElementById('lng').value = loc.lng();
-                        map.setCenter(loc);
-                        map.setZoom(17);
-                        showToast("場所の特定に成功しました！");
-                    }
-                });
-            }
-        } else {
-            showToast("自動取得に失敗しました。手動で入力してください。");
+            if (data.name) document.getElementById('store-name').value = data.name;
+            if (data.lat \u0026\u0026 data.lng) {
+    document.getElementById('lat').value = data.lat;
+    document.getElementById('lng').value = data.lng;
+    const loc = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
+    map.setCenter(loc);
+    map.setZoom(17);
+    showToast("店舗を特定しました！");
+}
         }
     } catch (err) {
-        console.error(err);
-        showToast("通信エラーが発生しました。");
-    } finally {
-        document.getElementById('url').classList.remove('loading');
-    }
+    console.error(err);
+}
 });
 
-initMap();
+// 確実に初期化を実行
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMap);
+} else {
+    initMap();
+}
