@@ -110,7 +110,10 @@ async function addMarkerToMap(incident) {
         title: incident.storeName
     });
 
-    marker.element.addEventListener('click', () => showInfoPanel(incident));
+    marker.element.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showInfoPanel(incident);
+    });
     markers.push(marker);
 }
 
