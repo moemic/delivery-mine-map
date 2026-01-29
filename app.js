@@ -5,7 +5,7 @@ let isAddMode = false;
 let autocomplete;
 
 // デプロイ済みGAS URL
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyjgYtIOMl3mmAU2toAwD3_NxANm9SRnSli2XWZYqOpgCH3whqPNm1nbdidMJ5ql5rf/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbznVXoA-Kel1Q-u4_cS5aVVu3MuOfyG4Xv2K-VrNYkLLFS__iECmWceTVT-NTLkowvh/exec";
 
 // アイコンとラベルの定義
 const icons = {
