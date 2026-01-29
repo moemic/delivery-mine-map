@@ -1,4 +1,4 @@
-// app.js - Mine Map Frontend (Stable Version)
+// app.js - Mine Map Frontend (Complete & Stable)
 let map;
 let markers = [];
 let isAddMode = false;
@@ -7,7 +7,7 @@ let autocomplete;
 // デプロイ済みGAS URL
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyjgYtIOMl3mmAU2toAwD3_NxANm9SRnSli2XWZYqOpgCH3whqPNm1nbdidMJ5ql5rf/exec";
 
-// 地雷タイプ別の絵文字
+// アイコンとラベルの定義
 const icons = {
     wait: '⏳',
     location: '🗺️',
@@ -33,19 +33,15 @@ async function initMap() {
         const { Autocomplete } = await google.maps.importLibrary("places");
 
         map = new Map(document.getElementById("map"), {
-            center: { lat: 35.6895, lng: 139.6917 },
+            center: { lat: 34.6937, lng: 135.5023 }, // 初期位置（大阪周辺など任意）
             zoom: 13,
             mapId: "DEMO_MAP_ID",
             disableDefaultUI: false,
         });
 
-        // 検索機能のセットアップ
         initAutocomplete(Autocomplete);
-
-        // データのロード
         fetchIncidents();
 
-        // マッパー追加用クリックイベント
         map.addListener("click", (e) => {
             if (!isAddMode) {
                 closeInfoPanel();
@@ -54,9 +50,8 @@ async function initMap() {
             handleMapClick(e.latLng, Geocoder);
         });
 
-        console.log("Map initialized successfully.");
     } catch (error) {
-        console.error("Error during Map initialization:", error);
+        console.error("Map Load Error:", error);
     }
 }
 
@@ -69,9 +64,7 @@ function initAutocomplete(Autocomplete) {
 
     autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
-        if (!place.geometry || !place.geometry.location) {
-            return;
-        }
+        if (!place.geometry || !place.geometry.location) return;
 
         map.setCenter(place.geometry.location);
         map.setZoom(17);
@@ -82,24 +75,17 @@ function initAutocomplete(Autocomplete) {
             document.getElementById('store-name').value = place.name || "";
             document.getElementById('add-modal').classList.remove('hidden');
             toggleAddMode(false);
-        } else {
-            showToast(`${place.name} に移動しました。`);
         }
     });
 }
 
-// データ取得
 async function fetchIncidents() {
     if (!GAS_URL) return;
-
     try {
         const response = await fetch(GAS_URL);
         const data = await response.json();
-
-        // 既存マーカーをクリア
         markers.forEach(m => m.setMap(null));
         markers = [];
-
         data.forEach(incident => addMarkerToMap(incident));
     } catch (e) {
         console.error("Fetch failed", e);
@@ -108,31 +94,23 @@ async function fetchIncidents() {
 
 async function addMarkerToMap(incident) {
     const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-
-    const position = {
-        lat: parseFloat(incident.lat),
-        lng: parseFloat(incident.lng)
-    };
-
+    const position = { lat: parseFloat(incident.lat), lng: parseFloat(incident.lng) };
     if (isNaN(position.lat) || isNaN(position.lng)) return;
 
     const content = document.createElement('div');
     content.className = 'custom-marker';
-    content.textContent = icons[incident.type] || icons.other;
+    content.textContent = icons[incident.hazardType] || icons.other;
     content.style.fontSize = '24px';
     content.style.cursor = 'pointer';
 
     const marker = new AdvancedMarkerElement({
-        map: map,
-        position: position,
-        content: content,
-        title: labels[incident.type] || incident.type
+        map,
+        position,
+        content,
+        title: incident.storeName
     });
 
-    marker.element.addEventListener('click', () => {
-        showInfoPanel(incident);
-    });
-
+    marker.element.addEventListener('click', () => showInfoPanel(incident));
     markers.push(marker);
 }
 
@@ -142,22 +120,19 @@ function showInfoPanel(incident) {
 
     let extraHtml = "";
     if (incident.waitTime) extraHtml += `<p><strong>目安待ち時間:</strong> ${incident.waitTime}分</p>`;
-    if (incident.url) extraHtml += `<p><a href="${incident.url}" target="_blank" class="external-link">🔗 Googleマップで見る</a></p>`;
-    if (incident.photoUrl) {
+    if (incident.originalMapUrl) extraHtml += `<p><a href="${incident.originalMapUrl}" target="_blank" class="external-link">🔗 Googleマップで見る</a></p>`;
+    if (incident.photoUrl && incident.photoUrl.startsWith('http')) {
         extraHtml += `<div class="info-photo"><img src="${incident.photoUrl}" alt="証拠写真" style="max-width:100%; border-radius:8px; margin-top:10px;"></div>`;
     }
 
     content.innerHTML = `
         <div class="incident-detail">
-            <h3>${labels[incident.type] || '地雷情報'} ${icons[incident.type] || ''}</h3>
+            <h3>${labels[incident.hazardType] || '地雷情報'} ${icons[incident.hazardType] || ''}</h3>
             <p><strong>店名:</strong> ${incident.storeName || '不明'}</p>
             <div class="desc">${incident.comment || ''}</div>
-            <div class="extra-info">
-                ${extraHtml}
-            </div>
+            <div class="extra-info">${extraHtml}</div>
         </div>
     `;
-
     panel.classList.remove('hidden');
 }
 
@@ -168,7 +143,6 @@ function closeInfoPanel() {
 async function handleMapClick(latLng, Geocoder) {
     document.getElementById('lat').value = latLng.lat();
     document.getElementById('lng').value = latLng.lng();
-
     const geocoder = new Geocoder();
     try {
         const response = await geocoder.geocode({ location: latLng });
@@ -176,19 +150,54 @@ async function handleMapClick(latLng, Geocoder) {
             document.getElementById('store-name').value = response.results[0].formatted_address;
         }
     } catch (e) { }
-
     toggleAddMode(false);
     document.getElementById('add-modal').classList.remove('hidden');
 }
 
-// 投稿機能
-// URL入力時の自動取得
+// 投稿フォーム送信
+document.getElementById('incident-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newIncident = {
+        id: Date.now(),
+        lat: parseFloat(document.getElementById('lat').value),
+        lng: parseFloat(document.getElementById('lng').value),
+        hazardType: document.getElementById('hazard-type').value,
+        storeName: document.getElementById('store-name').value,
+        waitTime: document.getElementById('wait-time').value,
+        comment: document.getElementById('comment').value,
+        originalMapUrl: document.getElementById('map-url').value,
+        photoBase64: document.getElementById('photo-base64').value
+    };
+
+    try {
+        showToast("送信中...");
+        const response = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify(newIncident)
+        });
+        const result = await response.json();
+        if (result.status === "success") {
+            showToast("報告が完了しました！💣");
+            fetchIncidents();
+            document.getElementById('add-modal').classList.add('hidden');
+            e.target.reset();
+            document.getElementById('photo-preview').src = "";
+            document.getElementById('preview-area').classList.add('hidden');
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (err) {
+        showToast("エラー: " + err.message);
+    }
+});
+
+// URL自動解析
 document.getElementById('map-url').addEventListener('change', async (e) => {
     const url = e.target.value.trim();
     if (!url || !url.includes('maps')) return;
 
     try {
-        showToast("店舗情報を取得中...");
+        showToast("情報を抽出中...");
         const response = await fetch(`${GAS_URL}?action=analyze&url=${encodeURIComponent(url)}`);
         const result = await response.json();
 
@@ -201,7 +210,7 @@ document.getElementById('map-url').addEventListener('change', async (e) => {
                 const loc = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
                 map.setCenter(loc);
                 map.setZoom(17);
-                showToast("店舗を特定しました！");
+                showToast("場所を特定しました！");
             }
         }
     } catch (err) {
@@ -209,7 +218,42 @@ document.getElementById('map-url').addEventListener('change', async (e) => {
     }
 });
 
-// 確実に初期化を実行
+// 写真処理
+document.getElementById('photo-btn').addEventListener('click', () => document.getElementById('photo').click());
+document.getElementById('photo').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('file-name').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        document.getElementById('photo-base64').value = event.target.result;
+        document.getElementById('photo-preview').src = event.target.result;
+        document.getElementById('preview-area').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+});
+
+// UI制御
+document.getElementById('close-panel').addEventListener('click', closeInfoPanel);
+document.querySelector('.close-modal').addEventListener('click', () => document.getElementById('add-modal').classList.add('hidden'));
+document.getElementById('add-mode-btn').addEventListener('click', () => toggleAddMode(!isAddMode));
+document.getElementById('wait-time').addEventListener('input', (e) => document.getElementById('wait-time-val').textContent = `${e.target.value}分`);
+
+function toggleAddMode(active) {
+    isAddMode = active;
+    const btn = document.getElementById('add-mode-btn');
+    btn.classList.toggle('active', isAddMode);
+    document.body.style.cursor = isAddMode ? "crosshair" : "default";
+    if (isAddMode) showToast("地図上をクリックして報告");
+}
+
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3500);
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initMap);
 } else {

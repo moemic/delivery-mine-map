@@ -25,6 +25,11 @@ function doGet(e) {
     return analyzeMapUrl(url);
   }
 
+  // テストデータ投入アクション
+  if (action === "seed") {
+    return createDummyData();
+  }
+
   // 通常のデータ取得
   return getAllData();
 }
@@ -166,5 +171,25 @@ function analyzeMapUrl(url) {
 function createJsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// テストデータ生成
+function createDummyData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  // 既存データを確認し、空ならヘッダーとデータを追加
+  if (sheet.getLastRow() <= 1) {
+    // ヘッダーがなければ追加
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["id", "lat", "lng", "storeName", "hazardType", "waitTime", "comment", "photoUrl", "originalMapUrl", "created_at"]);
+    }
+    
+    // データ追加
+    sheet.appendRow([1, 35.6581, 139.7017, "渋谷の激混み店", "wait", 30, "いつも30分以上待たされます。1階の入り口が狭いので注意。", "", "https://maps.app.goo.gl/dummy1", new Date()]);
+    sheet.appendRow([2, 35.6595, 139.7005, "迷宮のハンバーガー屋", "location", 5, "雑居ビルの3階で看板がありません。エレベーターの裏側にあります。", "", "https://maps.app.goo.gl/dummy2", new Date()]);
+    sheet.appendRow([3, 35.6980, 139.7710, "秋葉原の不機嫌カフェ", "attitude", 10, "店員さんが常に怒ってます。商品の受け渡しが雑。", "", "https://maps.app.goo.gl/dummy3", new Date()]);
+    
+    return createJsonResponse({ status: "success", message: "Dummy data created." });
+  }
+  return createJsonResponse({ status: "error", message: "Data already exists." });
 }
 // End of GAS Script
