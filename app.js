@@ -32,12 +32,50 @@ async function initMap() {
         const { Geocoder } = await google.maps.importLibrary("geocoding");
         const { Autocomplete } = await google.maps.importLibrary("places");
 
+        // デフォルト: 東京駅
+        let initialCenter = { lat: 35.6812, lng: 139.7671 };
+
+        // 保存された位置があれば読み込み
+        const savedPos = localStorage.getItem('mapCenter');
+        if (savedPos) {
+            try {
+                initialCenter = JSON.parse(savedPos);
+            } catch (e) { console.error("Failed to parse saved position", e); }
+        }
+
         map = new Map(document.getElementById("map"), {
-            center: { lat: 34.6937, lng: 135.5023 }, // 初期位置（大阪周辺など任意）
+            center: initialCenter,
             zoom: 13,
             mapId: "DEMO_MAP_ID",
             disableDefaultUI: false,
         });
+
+        // 位置保存
+        map.addListener('idle', () => {
+            const center = map.getCenter();
+            if (center) {
+                localStorage.setItem('mapCenter', JSON.stringify({
+                    lat: center.lat(),
+                    lng: center.lng()
+                }));
+            }
+        });
+
+        // 現在地取得
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    map.setCenter(pos);
+                },
+                () => {
+                    console.log("Geolocation failed or denied.");
+                }
+            );
+        }
 
         initAutocomplete(Autocomplete);
         fetchIncidents();
